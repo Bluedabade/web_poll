@@ -1,0 +1,64 @@
+sudo mkdir -p /mnt/centos_iso
+sudo mount -o loop /dev/sdb1 /mnt/centos_iso
+sudo nano /etc/yum.repos.d/local.repo
+[local]
+name=CentOS-7-64_x86
+baseurl=file:///mnt/centos_iso
+enabled=1
+gpgcheck=0
+sudo mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak
+sudo yum clean all
+sudo yum repolist
+sudo yum install http php php-mysql -y
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo nano /etc/named.conf
+sudo nano /var/named/ayuttech-skill.com.zone
+
+@ IN SOA ns1.ayuttech-skill.com. root.ayuttech-skill.com. (
+    2024112201
+    1800
+    3600
+    604800
+    84000
+)
+
+@ IN NS ayuttech-skill.com.
+
+ns1 IN A 192.168.10.10
+@ IN A 192.168.10.10
+
+sudo chown -R named:named /var/named/ayuttech-skill.com.zone
+sudo systemctl start named
+sudo systemctl enable named
+
+sudo yum localinstall /mnt/centos_iso/Packages/dhcp-*.rpm -y
+sudo nano /etc/dhcp/dhcpd.conf
+
+default-lease-time 600;
+max-lease-time 7200;
+option domain-name "com";
+option domain-name-servers 192.168.10.10, 8.8.8.8;
+subnet 192.168.10.0 netmask 255.255.255.0 {
+    range 192.168.10.11 192.168.10.20;
+    option routers 192.168.10.15;
+    option subnet-mask 255.255.255.0;
+    option broadcast-address 255.255.255.0;
+}
+
+sudo systemctl start dhcpd
+sudo systemctl enable dhcpd
+
+sudo systemctl start vsftpd
+sudo systemctl enable vsftpd
+
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
+sudo mysql_secure_installation
+
+sudo adduser web
+sudo passwd web
+sudo usermod -aG wheel web
+sudo usermod -d /var/www/html web
+sudo chown -R web:web /var/www/html
+
